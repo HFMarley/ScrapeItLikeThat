@@ -11,7 +11,7 @@ var cheerio = require("cheerio");
 // Require all models
 var db = require("./models");
 
-var PORT = 3000;
+var PORT = process.env.PORT || 3000;
 
 // Initialize Express
 var app = express();
@@ -26,41 +26,58 @@ app.use(express.json());
 // Make public a static folder
 app.use(express.static("public"));
 
-// Connect to the Mongo DB
-mongoose.connect("mongodb://localhost/unit18Populater", { useNewUrlParser: true });
+
+// If deployed, use the deployed database. Otherwise use the local mongoHeadlines database
+var MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost/mongoHeadlines";
+mongoose.connect(MONGODB_URI);
 
 // Routes
+
+app.get("/", function(req, res) {
+  res.json(path.join(__dirname, "public/index.html"));
+});
 
 // A GET route for scraping the echoJS website
 app.get("/scrape", function(req, res) {
   // First, we grab the body of the html with axios
-  axios.get("http://www.echojs.com/").then(function(response) {
+  axios.get("https://www.nytimes.com/search?query=soccer").then(function(response) {
     // Then, we load that into cheerio and save it to $ for a shorthand selector
     var $ = cheerio.load(response.data);
 
     // Now, we grab every h2 within an article tag, and do the following:
-    $("article h2").each(function(i, element) {
+    $(".css-138we14").each(function(i, element) {
+      var title = $(element).find("h4").text();
+      var link = "https://nytimes.com" + $(element).find("a").attr("href");
+      var summary = $(element).find("p").text();
+
+      db.Article.create({
+        title: title,
+        summary: summary,
+        link: link
+      }, function (error, found) {
+        if (error) throw error
+      });
       // Save an empty result object
-      var result = {};
+      // var result = {};
 
       // Add the text and href of every link, and save them as properties of the result object
-      result.title = $(this)
-        .children("a")
-        .text();
-      result.link = $(this)
-        .children("a")
-        .attr("href");
+      // result.title = $(this)
+      //   .children("a")
+      //   .text();
+      // result.link = $(this)
+      //   .children("a")
+      //   .attr("href");
 
       // Create a new Article using the `result` object built from scraping
-      db.Article.create(result)
-        .then(function(dbArticle) {
-          // View the added result in the console
-          console.log(dbArticle);
-        })
-        .catch(function(err) {
-          // If an error occurred, log it
-          console.log(err);
-        });
+      // db.Article.create(result)
+      //   .then(function(dbArticle) {
+      //     // View the added result in the console
+      //     console.log(dbArticle);
+      //   })
+      //   .catch(function(err) {
+      //     // If an error occurred, log it
+      //     console.log(err);
+      //   });
     });
 
     // Send a message to the client
