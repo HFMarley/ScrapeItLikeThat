@@ -49,39 +49,19 @@ app.get("/scrape", function(req, res) {
       var title = $(element).find("h4").text();
       var link = "https://nytimes.com" + $(element).find("a").attr("href");
       var summary = $(element).find("p").text();
-
       db.Article.create({
-        title: title,
-        summary: summary,
-        link: link
+        title,
+        summary,
+        link
       }, function (error, found) {
         if (error) throw error
       });
-      // Save an empty result object
-      // var result = {};
-
-      // Add the text and href of every link, and save them as properties of the result object
-      // result.title = $(this)
-      //   .children("a")
-      //   .text();
-      // result.link = $(this)
-      //   .children("a")
-      //   .attr("href");
-
-      // Create a new Article using the `result` object built from scraping
-      // db.Article.create(result)
-      //   .then(function(dbArticle) {
-      //     // View the added result in the console
-      //     console.log(dbArticle);
-      //   })
-      //   .catch(function(err) {
-      //     // If an error occurred, log it
-      //     console.log(err);
-      //   });
+      
     });
 
     // Send a message to the client
     res.send("Scrape Complete");
+    
   });
 });
 
@@ -92,6 +72,20 @@ app.get("/articles", function(req, res) {
     .then(function(dbArticle) {
       // If we were able to successfully find Articles, send them back to the client
       res.json(dbArticle);
+    })
+    .catch(function(err) {
+      // If an error occurred, send it to the client
+      res.json(err);
+    });
+});
+
+// Route for getting all notes from the db
+app.get("/Note", function(req, res) {
+  // Grab every document in the Articles collection
+  db.Note.find({})
+    .then(function(dbNote) {
+      // If we were able to successfully find Articles, send them back to the client
+      res.json(dbNote);
     })
     .catch(function(err) {
       // If an error occurred, send it to the client
@@ -133,6 +127,48 @@ app.post("/articles/:id", function(req, res) {
       // If an error occurred, send it to the client
       res.json(err);
     });
+});
+
+//delete a note
+app.delete("/notes/delete/:note_id/:article_id", function(req,res){
+  //Use the note id to find and delete it
+  Note.findOneAndRemove({"_id": req.params.note_id}, function(err){
+      //Log any errors
+      if (err){
+          console.log(err);
+          res.send(err);
+      }
+      else{
+          Article.findOneAndUpdate({"_id": req.params.article_id}, {$pull: {"notes": req.params.note}})
+          .exec(function(err){
+              if(err){
+                  console.log(err);
+                  res.send(err);
+              }
+              else{
+                  //or send the note to the browser
+                  res.send("Note Deleted");
+              }
+          });
+      }
+  });
+});
+
+//Delete an article
+app.post("/articles/delete/:id", function(req,res){
+  //Use the article id to find and update its saved boolean
+  Article.findOneAndUpdate({"_id": req.params.id}, {"saved":false, "notes":[]})
+  //Execute the above query
+  .exec(function(err,doc){
+      //Log any errors
+      if (err){
+          console.log(err);
+      }
+      else{
+          //Or send the document to the browser
+          res.send(doc);
+      }
+  });
 });
 
 // Start the server

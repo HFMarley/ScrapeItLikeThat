@@ -3,7 +3,7 @@ $.getJSON("/articles", function(data) {
   // For each one
   for (var i = 0; i < data.length; i++) {
     // Display the apropos information on the page
-    $("#articles").append("<p data-id='" + data[i]._id + "'>" + data[i].title + "<br />" + data[i].link + "</p>");
+    $("#articles").append("<p data-id='" + data[i]._id + "'>" + data[i].title + "<br />" + data[i].link + "<br />" + data[i].summary + "</p>");
   }
 });
 
@@ -69,4 +69,15 @@ $(document).on("click", "#savenote", function() {
   // Also, remove the values entered in the input and textarea for note entry
   $("#titleinput").val("");
   $("#bodyinput").val("");
+});
+
+// Handle Delete Article button
+$(".delete").on("click", function(){
+  let thisId = $(this).attr("data-id");
+  $.ajax ({
+      method:"POST",
+      url: "/articles/delete/" + thisId
+  }).done(function(data){
+   window.location = '/saved'   
+  })
 });
